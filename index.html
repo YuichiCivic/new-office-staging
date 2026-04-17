@@ -998,25 +998,13 @@ try {
     track.style.transform = 'translateX(' + (-currentIndex * 100) + '%)';
     indexEl.textContent = currentIndex + 1;
     preloadAround(currentIndex);
-    // Update save button
-    saveEl.onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      var imgSrc = photos[currentIndex].thumb;
-      fetch(imgSrc)
-        .then(function(r) { return r.blob(); })
-        .then(function(blob) {
-          var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'renovation_photo_' + (currentIndex + 1) + '.jpg';
-          a.click();
-          URL.revokeObjectURL(a.href);
-        })
-        .catch(function() {
-          // CORS fallback: open in new tab
-          window.open(imgSrc, '_blank');
-        });
-    };
+    // Update save button: link to Google Drive file view for reliable mobile download
+    var fileId = photos[currentIndex].thumb.match(/id=([^&]+)/);
+    if (fileId) {
+      saveEl.href = 'https://drive.google.com/uc?export=download&id=' + fileId[1];
+      saveEl.setAttribute('target', '_blank');
+      saveEl.setAttribute('rel', 'noopener');
+    }
   }
 
   function goTo(index) {
@@ -1029,8 +1017,16 @@ try {
   function prev() { goTo(currentIndex - 1); }
   function next() { goTo(currentIndex + 1); }
 
-  document.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
-  document.querySelector('.lightbox-backdrop').addEventListener('click', closeLightbox);
+  var justSwiped = false;
+
+  document.querySelector('.lightbox-close').addEventListener('click', function(e) {
+    e.stopPropagation();
+    closeLightbox();
+  });
+  document.querySelector('.lightbox-backdrop').addEventListener('click', function() {
+    if (justSwiped) { justSwiped = false; return; }
+    closeLightbox();
+  });
   document.querySelector('.lightbox-prev').addEventListener('click', function(e) { e.stopPropagation(); prev(); });
   document.querySelector('.lightbox-next').addEventListener('click', function(e) { e.stopPropagation(); next(); });
 
@@ -1088,6 +1084,8 @@ try {
     if (!isOpen) return;
     track.classList.remove('dragging');
     if (isSwiping && directionLocked) {
+      justSwiped = true;
+      setTimeout(function() { justSwiped = false; }, 400);
       if (touchDeltaX < -swipeThreshold && currentIndex < photos.length - 1) {
         next();
       } else if (touchDeltaX > swipeThreshold && currentIndex > 0) {
@@ -1095,6 +1093,10 @@ try {
       } else {
         updateSlide();
       }
+    } else if (directionLocked) {
+      // Vertical scroll or short touch - don't close
+      justSwiped = true;
+      setTimeout(function() { justSwiped = false; }, 400);
     }
     isSwiping = false;
     directionLocked = false;
