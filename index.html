@@ -109,10 +109,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    -webkit-animation: splashFadeOut 0.8s ease 2s forwards;
     animation: splashFadeOut 0.8s ease 2s forwards;
   }
+  @-webkit-keyframes splashFadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; z-index: -1; }
+  }
   @keyframes splashFadeOut {
-    to { opacity: 0; visibility: hidden; pointer-events: none; }
+    0% { opacity: 1; }
+    100% { opacity: 0; z-index: -1; }
   }
   .splash-logo {
     width: 160px; height: 160px;
@@ -827,6 +833,12 @@
 </div>
 
 <script>
+// Splash fallback: hide after 3s no matter what
+setTimeout(function() {
+  var s = document.getElementById('splash');
+  if (s) { s.style.opacity = '0'; s.style.pointerEvents = 'none'; s.style.zIndex = '-1'; }
+}, 3000);
+
 function applyClasses() {
   var classes = [];
   if (localStorage.getItem('lang') === 'en') classes.push('lang-en');
