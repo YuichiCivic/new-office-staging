@@ -581,6 +581,35 @@
   .lightbox-slide.loaded img {
     opacity: 1;
   }
+  .lightbox.save-mode .lightbox-slide img {
+    pointer-events: auto;
+    -webkit-user-select: auto;
+    user-select: auto;
+    -webkit-touch-callout: default;
+  }
+  .lightbox-toast {
+    position: absolute;
+    bottom: max(40px, env(safe-area-inset-bottom, 40px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 980px;
+    font-size: 0.85em;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  body.light .lightbox-toast {
+    background: rgba(0,0,0,0.75);
+  }
+  .lightbox-toast.show {
+    opacity: 1;
+  }
 </style>
 </head>
 <body>
@@ -852,12 +881,13 @@
 
 <div class="lightbox" id="lightbox">
   <div class="lightbox-backdrop"></div>
-  <a class="lightbox-save" id="lightbox-save" href="#" download title="Save"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></a>
+  <button class="lightbox-save" id="lightbox-save" title="Save"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></button>
   <button class="lightbox-close">&times;</button>
   <div class="lightbox-counter"><span id="lightbox-index">1</span> / <span id="lightbox-total">19</span></div>
   <button class="lightbox-arrow lightbox-prev">&#8249;</button>
   <button class="lightbox-arrow lightbox-next">&#8250;</button>
   <div class="lightbox-track" id="lightbox-track"></div>
+  <div class="lightbox-toast" id="lightbox-toast"></div>
 </div>
 
 <script>
@@ -974,8 +1004,20 @@ try {
     isOpen = true;
   }
 
+  var toastEl = document.getElementById('lightbox-toast');
+  var toastTimer = null;
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { toastEl.classList.remove('show'); }, 3000);
+  }
+
   function closeLightbox() {
     lightbox.classList.remove('active');
+    lightbox.classList.remove('save-mode');
+    toastEl.classList.remove('show');
     document.body.style.overflow = '';
     isOpen = false;
   }
@@ -998,13 +1040,8 @@ try {
     track.style.transform = 'translateX(' + (-currentIndex * 100) + '%)';
     indexEl.textContent = currentIndex + 1;
     preloadAround(currentIndex);
-    // Update save button: link to Google Drive file view for reliable mobile download
-    var fileId = photos[currentIndex].thumb.match(/id=([^&]+)/);
-    if (fileId) {
-      saveEl.href = 'https://drive.google.com/uc?export=download&id=' + fileId[1];
-      saveEl.setAttribute('target', '_blank');
-      saveEl.setAttribute('rel', 'noopener');
-    }
+    // Reset save mode when navigating
+    lightbox.classList.remove('save-mode');
   }
 
   function goTo(index) {
@@ -1018,6 +1055,19 @@ try {
   function next() { goTo(currentIndex + 1); }
 
   var justSwiped = false;
+
+  // Save button: enable long-press on image
+  saveEl.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var inSaveMode = lightbox.classList.toggle('save-mode');
+    if (inSaveMode) {
+      var isJa = !document.body.classList.contains('lang-en');
+      showToast(isJa ? '画像を長押しして「写真に追加」' : 'Long press image to save to photos');
+    } else {
+      toastEl.classList.remove('show');
+    }
+  });
 
   document.querySelector('.lightbox-close').addEventListener('click', function(e) {
     e.stopPropagation();
